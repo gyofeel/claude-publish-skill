@@ -1,0 +1,21 @@
+{
+  "name": "claude-publish-skill",
+  "metadata": {
+    "description": "Publish a local Claude Code skill as a public plugin: scaffold manifests, git init, gh repo create, tag + release."
+  },
+  "owner": {
+    "name": "gyofeel"
+  },
+  "plugins": [
+    {
+      "name": "publish-skill",
+      "description": "Package and publish a local skill to GitHub as an installable Claude Code plugin.",
+      "author": {
+        "name": "gyofeel"
+      },
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/gyofeel/claude-publish-skill"
+    }
+  ]
+}

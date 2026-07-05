@@ -1,0 +1,12 @@
+{
+  "name": "publish-skill",
+  "version": "0.1.0",
+  "description": "Package a local Claude Code skill into a public plugin repo and publish it to GitHub — manifests, README, git init, gh repo create, tag + release.",
+  "author": {
+    "name": "gyofeel"
+  },
+  "homepage": "https://github.com/gyofeel/claude-publish-skill",
+  "repository": "https://github.com/gyofeel/claude-publish-skill",
+  "license": "MIT",
+  "keywords": ["plugin", "skill", "publish", "release", "github", "gh", "workflow", "automation"]
+}
