@@ -8,5 +8,14 @@
   "homepage": "https://github.com/gyofeel/claude-publish-skill",
   "repository": "https://github.com/gyofeel/claude-publish-skill",
   "license": "MIT",
-  "keywords": ["skill", "publish", "release", "github", "agent-skills", "cursor", "codex", "automation"]
+  "keywords": [
+    "skill",
+    "publish",
+    "release",
+    "github",
+    "agent-skills",
+    "cursor",
+    "codex",
+    "automation"
+  ]
 }
