@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# publish.sh — first-time publish of a scaffolded Claude Code plugin repo.
+# publish.sh — first-time publish of a scaffolded skill repo.
 #
-# Assumes the target dir already contains .claude-plugin/plugin.json,
-# marketplace.json, the skill tree, README, LICENSE, .gitignore
+# Assumes the target dir already contains skills/<name>/SKILL.md, README,
+# LICENSE, .gitignore, and — for Claude Code targets only — .claude-plugin/*.json
 # (the SKILL.md procedure writes those first). This script owns the
 # mechanical git/gh pipeline only — the part that is repetitive and error-prone.
 #
 # Usage: publish.sh <target_dir> <owner/repo> <version> [description]
-#   target_dir   absolute path to the scaffolded plugin repo
+#   target_dir   absolute path to the scaffolded repo
 #   owner/repo   GitHub slug, e.g. gyofeel/claude-publish-skill
 #   version      semver without the leading v, e.g. 0.1.0
-#   description  optional repo description (defaults to plugin.json description)
+#   description  optional repo description (defaults to plugin.json's, else repo name)
 
 set -euo pipefail
 
@@ -23,11 +23,14 @@ command -v gh >/dev/null || { echo "error: gh CLI not installed"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "error: not logged in — run: gh auth login"; exit 1; }
 
 cd "$TARGET_DIR"
-[ -f .claude-plugin/plugin.json ] || { echo "error: .claude-plugin/plugin.json missing — scaffold first"; exit 1; }
+# The one invariant every agent shares. .claude-plugin/ is Claude Code only.
+[ -n "$(find skills -maxdepth 2 -name SKILL.md 2>/dev/null)" ] \
+  || { echo "error: skills/<name>/SKILL.md missing — scaffold first"; exit 1; }
 
-if [ -z "$DESC" ]; then
+if [ -z "$DESC" ] && [ -f .claude-plugin/plugin.json ]; then
   DESC="$(node -e "process.stdout.write(require('./.claude-plugin/plugin.json').description||'')")"
 fi
+DESC="${DESC:-${SLUG##*/}}"
 
 # 1. Validate every JSON file in the repo before publishing.
 echo "==> validating JSON"
@@ -45,7 +48,7 @@ git add -A
 if git diff --cached --quiet; then
   echo "==> nothing to commit (already committed)"
 else
-  git commit -q -m "feat: initial ${SLUG##*/} plugin v${VERSION}
+  git commit -q -m "feat: initial ${SLUG##*/} v${VERSION}
 
 $DESC
 
