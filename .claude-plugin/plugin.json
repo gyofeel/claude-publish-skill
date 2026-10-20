@@ -1,6 +1,6 @@
 {
   "name": "publish-skill",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Package a local skill into a public or private GitHub repo installable by Claude Code, Cursor, Codex CLI, Gemini CLI and 70+ agents — visibility review, interview-driven targets, manifests, README, git init, gh repo create, tag + release.",
   "author": {
     "name": "gyofeel"
