@@ -1,7 +1,7 @@
 {
   "name": "claude-publish-skill",
   "metadata": {
-    "description": "Publish a local skill as a public repo for Claude Code, Cursor, Codex CLI and Gemini CLI: pick targets by interview, scaffold manifests, git init, gh repo create, tag + release."
+    "description": "Publish a local skill as a public or private repo for Claude Code, Cursor, Codex CLI and Gemini CLI: pick targets by interview, scaffold manifests, git init, gh repo create, tag + release."
   },
   "owner": {
     "name": "gyofeel"

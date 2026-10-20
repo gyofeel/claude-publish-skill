@@ -1,21 +1,21 @@
 ---
 name: publish-skill
 description: >
-  로컬 스킬(.claude/skills/<name>/)을 public repo로 패키징하고 GitHub에 배포하는
-  파이프라인. 인터뷰로 타깃 에이전트(Claude Code / Cursor / Codex CLI / Gemini CLI)를
-  정하고, 그에 맞는 매니페스트(.claude-plugin/plugin.json, marketplace.json)·README·
+  로컬 스킬(.claude/skills/<name>/)을 GitHub repo(public 또는 private)로 패키징해
+  배포하는 파이프라인. 스킬 내용을 검토해 공개 범위를 추천하고, 인터뷰로 공개 범위와
+  타깃 에이전트(Claude Code / Cursor / Codex CLI / Gemini CLI)를 정하고, 그에 맞는 매니페스트(.claude-plugin/plugin.json, marketplace.json)·README·
   LICENSE 작성, git init/commit, gh repo create, 버전 tag + release 생성까지 자동화한다.
-  "이 스킬 public으로 배포해줘", "플러그인으로 만들어 배포", "스킬 퍼블리싱",
+  "이 스킬 public으로 배포해줘", "private repo로 올려줘", "팀 내부용으로 배포", "플러그인으로 만들어 배포", "스킬 퍼블리싱",
   "마켓플레이스에 올려줘", "스킬 버전 올려서 릴리즈", "Cursor에도 쓸 수 있게 배포",
   "멀티 프로바이더로 배포", "Codex/Gemini에서도 되게", "npx skills add로 설치되게" 등
   로컬 스킬을 배포/공개/릴리즈하려는 신호가 있으면 반드시 사용한다.
 ---
 
-# publish-skill — 로컬 스킬을 public repo로 배포
+# publish-skill — 로컬 스킬을 GitHub repo로 배포
 
 ## 목적
 
-로컬에서 만든 스킬을 다른 사람이 설치할 수 있는 **public repo**로 만들어 배포한다. 반복되는 기계 작업(매니페스트 스캐폴딩 · git/gh 파이프라인 · tag+release)을 헬퍼 스크립트로 밀고, 판단이 필요한 부분(타깃 에이전트·description·keywords·README)만 사람이 채운다.
+로컬에서 만든 스킬을 다른 사람이 설치할 수 있는 GitHub repo로 만들어 배포한다. 기본은 **public**이고, 사내·개인 정보가 섞인 스킬은 **private**(repo 접근 권한자만 설치)로 낼 수 있다. 반복되는 기계 작업(매니페스트 스캐폴딩 · git/gh 파이프라인 · tag+release)을 헬퍼 스크립트로 밀고, 판단이 필요한 부분(공개 범위·타깃 에이전트·description·keywords·README)만 사람이 채운다.
 
 핵심: **배포 파이프라인에서 실제로 막히는 지점을 미리 처리한다.** 두 함정이 있다 — (1) 직접 `git push`가 403이면 credential helper가 gh 토큰을 안 쓰는 것(`gh auth setup-git` 필요), (2) tag+release를 따로 만들지 않으면 repo Releases 섹션이 비어 버전 표기가 안 된다. `scripts/publish.sh`가 둘 다 자동 처리한다.
 
@@ -40,12 +40,28 @@ description: >
   - 파일명이 **정확히 `SKILL.md`** 인가. `skill.md`/`Skill.md`는 Gemini CLI·Antigravity가 대소문자 구분 FS에서 경고 없이 건너뛴다 → 다르면 복사본에서 고친다.
   - `name`이 kebab-case ≤64자, `description` ≤1024자인가 → 넘으면 복사본에서 줄인다.
   - `allowed-tools`·`context`·`model`·`paths` 같은 **에이전트 전용 필드**가 있는지 기록. 지원 여부는 [references/providers.md](references/providers.md)의 매트릭스로 판단한다.
+- **공개 범위 점검 — 근거 줄만 모으고 판단은 2단계 Q0에서.** 스킬 트리 전체(references·scripts·evals 포함)를 본다.
+  - grep으로 기계 탐지: 토큰·키(`ghp_`, `github_pat_`, `sk-`, `xox[bp]-`, `AKIA`, `-----BEGIN .*PRIVATE KEY`), `.env` 파일, 이메일, IP, 사용자 홈 절대경로(`/Users/<name>/`, `/home/<name>/`, `C:\Users\`).
+  - 읽고 판단: 사내 도메인·내부 URL, 회사·조직명, 내부 프로젝트 코드명, 티켓 키, 사내 전용 인프라(내부 MCP·VPN 전용 API) 의존, 고객 데이터·영업 로직·사내 정책 문서, 출처·라이선스가 불분명한 외부 자료 복사.
 
 ---
 
 ## 2단계 — 타깃 에이전트 + 메타 확정
 
 배포에 필요한 것을 정한다. 불명확한 것만 사용자에게 소수 질문(추천안 먼저).
+
+**Q0. 공개 범위 — public / private. 항상 묻는다.** 신호가 없어도 생략하지 않는다. private 옵션이 있다는 걸 사용자가 알고 고르게 하기 위해서다.
+
+1단계 공개 범위 점검 결과를 두 등급으로 나눠 **근거 줄(파일:줄) + 추천 + 이유**로 보고한다.
+
+| 등급 | 해당 | 처리 |
+|---|---|---|
+| **차단** | 토큰·키·비밀번호·개인키·`.env` | 공개 범위와 무관하게 **복사본에서 제거하기 전엔 배포 중단.** private는 해결책이 아니다 — 협업자 추가·포크·이후 public 전환 때 그대로 샌다. |
+| **private 추천** | 사내 도메인·URL, 조직명·코드명·티켓 키, 개인 절대경로·이메일, 사내 인프라 의존, 고객·영업·정책 자료, 라이선스 불분명 자료 | private를 추천안으로 먼저 제시. 또는 복사본에서 일반화(예: 절대경로 → `~/`)하고 public으로 가는 길도 함께 제시. |
+
+- 신호 없음 → **public 추천**(기본값), private 선택지도 함께 보여준다.
+- 결정은 사용자가 한다. 추천은 근거와 함께.
+- private repo도 Claude Code 플러그인·`npx skills add` 모두 설치된다. 설치하는 사람의 기존 git 인증(gh 로그인·SSH)을 쓴다 — 즉 **repo 접근 권한자만 설치 가능**.
 
 **Q1. 어디에서 설치 가능하게 할까?**
 
@@ -87,7 +103,7 @@ description: >
 ```
 skills/<skill-name>/     # 소스 스킬 트리를 cp -R 로 복사. 이게 범용 레이아웃 본체
 README.md                # references/readme-template.md 골격
-LICENSE                  # MIT
+LICENSE                  # MIT. public일 때만 — private는 생략(라이선스 없음 = All rights reserved)
 .gitignore
 ```
 
@@ -116,14 +132,14 @@ skills/<skill-name>/agents/openai.yaml   # references/providers.md 참고
 헬퍼 스크립트에 기계 작업을 맡긴다:
 
 ```bash
-bash skills/publish-skill/scripts/publish.sh <target_dir> <owner/repo> <version> [description]
+bash skills/publish-skill/scripts/publish.sh <target_dir> <owner/repo> <version> <public|private> [description]
 ```
 
-스크립트가 하는 일: 모든 JSON 검증 → git init/commit/main → `gh repo create --public --push` → (403이면 `gh auth setup-git` 후 재시도) → `v<version>` tag push → `gh release create`.
+스크립트가 하는 일: 모든 JSON 검증 → git init/commit/main → `gh repo create --<public|private> --push` → (403이면 `gh auth setup-git` 후 재시도) → `v<version>` tag push → `gh release create`.
 
-> Claude Code를 선택하지 않아 `plugin.json`이 없으면 **description을 4번째 인자로 넘긴다.** 스크립트가 plugin.json에서 읽을 수 없어서, 안 넘기면 repo 이름으로 폴백한다.
+> Claude Code를 선택하지 않아 `plugin.json`이 없으면 **description을 5번째 인자로 넘긴다.** 스크립트가 plugin.json에서 읽을 수 없어서, 안 넘기면 repo 이름으로 폴백한다.
 
-끝나면 출력의 **repo URL · release URL**을 사용자에게 보고한다. 설치 명령도 함께 안내하되, **선택한 에이전트의 것만** 안내한다.
+끝나면 출력의 **repo URL · release URL**을 사용자에게 보고한다. 설치 명령도 함께 안내하되, **선택한 에이전트의 것만** 안내한다. private면 "repo 접근 권한이 있어야 설치된다"를 덧붙이고, 협업자 추가는 `gh api -X PUT repos/<owner/repo>/collaborators/<user>`로 할 수 있다고 알린다.
 
 ---
 
@@ -152,13 +168,22 @@ semver 판단(patch/minor/major)은 사람이 한다.
 4. Claude Code를 새로 추가 → 2단계 메타 표를 채워 `.claude-plugin/plugin.json` + `marketplace.json` 신규 작성. `marketplace.json.name`은 **이미 존재하는 repo 이름**을 쓴다(새로 짓지 않는다).
 5. 커밋 후 `release.sh <target_dir> <minor bump>` — 기능 추가이므로 minor.
 
+### private → public 전환
+
+전환하면 **repo 히스토리 전체가 공개된다.** 지금 파일만이 아니라 과거 커밋에 남은 것도 보인다.
+
+1. 1단계 공개 범위 점검을 **현재 트리와 히스토리**(`git log -p`) 둘 다에 다시 돌린다. 히스토리에 차단 등급이 있으면 전환하지 않는다 — 새 repo로 다시 배포하는 편이 안전하다.
+2. LICENSE(MIT)를 추가하고 README Install의 "repo 접근 권한 필요" 줄을 지운 뒤 커밋.
+3. `gh repo edit <owner/repo> --visibility public --accept-visibility-change-consequences`
+
 ---
 
 ## 하지 말 것
 
 - `plugin.json.name`과 `marketplace.json.name`을 혼동 — 설치 명령이 깨진다.
 - tag 없이 `gh release create` 시도 — 스크립트가 tag를 먼저 push하는 이유.
-- private로 생성 — public 배포가 목적. `--public` 확인.
+- 공개 범위를 묻지 않고 진행 — 신호가 없어도 Q0는 항상 묻는다.
+- 차단 등급(토큰·키)을 private로 덮고 배포 — 제거가 먼저다.
 - 소스 스킬 원본 수정 — 복사본(target)만 손댄다.
 - 매니페스트/README를 임의 새 포맷으로 — references 템플릿과 기존 repo 관례를 따른다.
 - 배포 repo 안에 `.cursor/skills/`·`.agents/skills/` 미러 생성 — 설치 시점에 결정될 일이다.

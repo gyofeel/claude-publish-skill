@@ -6,18 +6,25 @@
 # (the SKILL.md procedure writes those first). This script owns the
 # mechanical git/gh pipeline only — the part that is repetitive and error-prone.
 #
-# Usage: publish.sh <target_dir> <owner/repo> <version> [description]
+# Usage: publish.sh <target_dir> <owner/repo> <version> <public|private> [description]
 #   target_dir   absolute path to the scaffolded repo
 #   owner/repo   GitHub slug, e.g. gyofeel/claude-publish-skill
 #   version      semver without the leading v, e.g. 0.1.0
+#   visibility   public | private — required so the choice is never implicit
 #   description  optional repo description (defaults to plugin.json's, else repo name)
 
 set -euo pipefail
 
-TARGET_DIR="${1:?usage: publish.sh <target_dir> <owner/repo> <version> [description]}"
+TARGET_DIR="${1:?usage: publish.sh <target_dir> <owner/repo> <version> <public|private> [description]}"
 SLUG="${2:?missing owner/repo}"
 VERSION="${3:?missing version}"
-DESC="${4:-}"
+VISIBILITY="${4:?missing visibility (public|private)}"
+DESC="${5:-}"
+
+case "$VISIBILITY" in
+  public|private) ;;
+  *) echo "error: visibility must be public or private, got: $VISIBILITY"; exit 1 ;;
+esac
 
 command -v gh >/dev/null || { echo "error: gh CLI not installed"; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "error: not logged in — run: gh auth login"; exit 1; }
@@ -56,10 +63,10 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 fi
 git branch -M main
 
-# 3. Create the public repo and push. If a plain push later 403s, the git
+# 3. Create the repo and push. If a plain push later 403s, the git
 #    credential helper isn't wired to the gh token — fix and retry.
-echo "==> creating public repo $SLUG"
-if ! gh repo create "$SLUG" --public --source=. --remote=origin --push --description "$DESC"; then
+echo "==> creating $VISIBILITY repo $SLUG"
+if ! gh repo create "$SLUG" --"$VISIBILITY" --source=. --remote=origin --push --description "$DESC"; then
   echo "==> repo create/push failed — wiring gh credential helper and retrying"
   gh auth setup-git
   git remote get-url origin >/dev/null 2>&1 || git remote add origin "https://github.com/$SLUG.git"

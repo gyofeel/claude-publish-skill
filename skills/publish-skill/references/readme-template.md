@@ -1,6 +1,6 @@
 # README 골격
 
-public repo의 README는 아래 순서를 따른다. `<...>`를 채운다.
+배포 repo의 README는 아래 순서를 따른다. `<...>`를 채운다.
 
 ````markdown
 # <plugin-name>
@@ -20,6 +20,9 @@ public repo의 README는 아래 순서를 따른다. `<...>`를 채운다.
 <번호 단계 또는 불릿으로 스킬의 흐름·기능 요약.>
 
 ## Install
+
+<!-- private일 때만 -->
+> This is a private repository — installing requires read access to it (your existing `gh` login or SSH key is used).
 
 Works in any agent that reads `SKILL.md` — Claude Code, Cursor, Codex CLI, Gemini CLI, and 70+ more:
 
@@ -58,6 +61,7 @@ skills/<plugin-name>/
 └── references/
 ```
 
+<!-- public일 때만. private는 License 섹션 자체를 뺀다 -->
 ## License
 
 MIT — see [LICENSE](LICENSE).
@@ -70,4 +74,5 @@ MIT — see [LICENSE](LICENSE).
 - 스킬 SKILL.md가 특정 언어(예: 한국어)면 "language-agnostic" 한 줄로 사용자 안심.
 - **Install 섹션은 선택한 에이전트만 남긴다.** Claude Code를 안 골랐으면 `/plugin` 블록도 지우고, Manual install 표에서도 그 행을 지운다. 검증 안 한 걸 문서화하지 않는다.
 - `npx skills add` 줄은 어떤 조합에서도 유지 — 레이아웃이 곧 표준이라 항상 유효하다.
+- private면 Install 맨 위에 접근 권한 안내 한 줄을 넣고, License 섹션은 뺀다(LICENSE 파일도 없음).
 - `<!-- ... -->` 주석은 템플릿 안내용이다. 실제 README에는 남기지 않는다.
